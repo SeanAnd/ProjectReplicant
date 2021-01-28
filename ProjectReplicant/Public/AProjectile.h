@@ -10,6 +10,7 @@
 class UProjectileMovementComponent;
 class USphereComponent;
 class UParticleSystem;
+class ASWeapon;
 
 UENUM()
 enum class ProjectileType : uint8 { Projectile, AOE };
@@ -37,15 +38,15 @@ protected:
 	TSubclassOf<UDamageType> DamageType;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
-	UParticleSystem* DefaultImpactEffect;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
 	ProjectileType ProjectileType;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
 	float AOERadius;
 
+	void PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint, UParticleSystem* DefaultImpactEffect, UParticleSystem* FleshImpactEffect);
 public:
+	UPROPERTY()
+		TEnumAsByte<EPhysicalSurface> SurfaceType;
 
 	AProjectile();
 

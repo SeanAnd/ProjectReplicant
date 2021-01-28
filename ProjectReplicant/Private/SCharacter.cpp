@@ -127,6 +127,7 @@ void ASCharacter::OnHealthChanged(USHealthComponent* OwningHealthComp, float Hea
 		GetMovementComponent()->StopMovementImmediately();
 		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		CurrentWeapon->SetActorEnableCollision(false);
+		CurrentWeapon->StopFire();
 
 		DetachFromControllerPendingDestroy();
 

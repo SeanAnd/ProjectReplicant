@@ -1,10 +1,13 @@
 // Copyright 1998-2017 Epic Games, Inc. All Rights Reserved.
 
 #include "AProjectile.h"
+#include "SWeapon.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Components/SphereComponent.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 #include <Runtime\Engine\Classes\Kismet\GameplayStatics.h>
 #include <ProjectReplicant\Public\SCharacter.h>
+#include <ProjectReplicant\CoopGame.h>
 
 AProjectile::AProjectile()
 {
@@ -68,13 +71,36 @@ void AProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimi
 		UGameplayStatics::ApplyRadialDamage(world, BaseDamage, GetActorLocation(), AOERadius, DamageType, IgnoreActors, MyOwner, EventInstigator, true);
 	}
 
+	EPhysicalSurface SurfaceType = SurfaceType_Default;
+	SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
+	ASWeapon* currentWeapon = SCharacter->GetCurrentWeapon();
+	UParticleSystem* FleshImpactEffect = currentWeapon->GetFleshImpactEffect();;
+	UParticleSystem* DefaultImpactEffect = currentWeapon->GetDefaultImpactEffect();
 
-	UParticleSystem* SelectedEffect = nullptr;
-	SelectedEffect = DefaultImpactEffect;
-	if (SelectedEffect)
+	if (currentWeapon)
 	{
-		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SelectedEffect, Hit.ImpactPoint);
+		PlayImpactEffects(SurfaceType, Hit.ImpactPoint, DefaultImpactEffect, FleshImpactEffect);
 	}
 
 	this->Destroy();
+}
+
+void AProjectile::PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint, UParticleSystem* DefaultImpactEffect, UParticleSystem* FleshImpactEffect)
+{
+	UParticleSystem* SelectedEffect = nullptr;
+	switch (SurfaceType)
+	{
+	case SURFACE_FLESHDEFAULT:
+	case SURFACE_FLESHVULNERABLE:
+		SelectedEffect = FleshImpactEffect;
+		break;
+	default:
+		SelectedEffect = DefaultImpactEffect;
+		break;
+	}
+
+	if (SelectedEffect)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SelectedEffect, ImpactPoint);
+	}
 }

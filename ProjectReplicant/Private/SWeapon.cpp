@@ -27,12 +27,15 @@ ASWeapon::ASWeapon()
 
 	CollisionComp = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionComp"));
 	CollisionComp->SetupAttachment(RootComponent, MuzzleSocketName);
-	//CollisionComp->bHiddenInGame = false; uncomment to see hitbox
+	//uncomment below to see hitbox
+	//CollisionComp->bHiddenInGame = false;
 	CollisionComp->InitBoxExtent(FVector(15, 20, 50));
 	CollisionComp->SetCollisionProfileName("Weapon");
 	//CollisionComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
-	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &ASWeapon::OnHit);
+	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &ASWeapon::OnWeaponOverlap);
 	CollisionComp->SetGenerateOverlapEvents(true);
+	//CollisionComp->OnComponentHit.AddDynamic(this, &ASWeapon::OnWeaponHit);	
+	//CollisionComp->SetNotifyRigidBodyCollision(true);
 	CollisionComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	CollisionComp->SetWalkableSlopeOverride(FWalkableSlopeOverride(WalkableSlope_Unwalkable, 0.f));
 	CollisionComp->CanCharacterStepUpOn = ECB_No;
@@ -372,6 +375,16 @@ TSubclassOf<UDamageType> ASWeapon::GetDamageType()
 	return this->DamageType;
 }
 
+UParticleSystem* ASWeapon::GetDefaultImpactEffect()
+{
+	return this->DefaultImpactEffect;
+}
+
+UParticleSystem* ASWeapon::GetFleshImpactEffect()
+{
+	return this->FleshImpactEffect;
+}
+
 void ASWeapon::ToggleCollisionCompOn()
 {
 	if (this->CollisionComp)
@@ -407,7 +420,7 @@ void ASWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetime
 	DOREPLIFETIME_CONDITION(ASWeapon, HitScanTrace, COND_SkipOwner);
 }
 
-void ASWeapon::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void ASWeapon::OnWeaponOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	AActor* MeleeOwner = this->GetOwner();
 	ASCharacter* SCharacter = Cast<ASCharacter>(MeleeOwner);
@@ -422,6 +435,26 @@ void ASWeapon::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiv
 			UGameplayStatics::ApplyDamage(HitActor, BaseDamage, MeleeOwner->GetInstigatorController(), MeleeOwner, DamageType);
 			//TODO: Figure out how to get the impact point so that the effect plays
 			PlayImpactEffects(SurfaceType, SweepResult.ImpactPoint);
+			RecentlyHit.Add(hitChar);
+		}
+	}
+}
+
+void ASWeapon::OnWeaponHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	AActor* MeleeOwner = this->GetOwner();
+	ASCharacter* SCharacter = Cast<ASCharacter>(MeleeOwner);
+	if (OtherActor != NULL && OtherActor != this && OtherActor != MeleeOwner && OtherComp != NULL)
+	{
+		AActor* HitActor = OtherActor;
+		ASCharacter* hitChar = Cast<ASCharacter>(HitActor);
+		if (hitChar && SCharacter->TeamNum != hitChar->TeamNum && !RecentlyHit.Contains(hitChar))
+		{
+			EPhysicalSurface SurfaceType = SurfaceType_Default;
+			SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
+			UGameplayStatics::ApplyDamage(HitActor, BaseDamage, MeleeOwner->GetInstigatorController(), MeleeOwner, DamageType);
+			//TODO: Figure out how to get the impact point so that the effect plays
+			PlayImpactEffects(SurfaceType, Hit.ImpactPoint);
 			RecentlyHit.Add(hitChar);
 		}
 	}

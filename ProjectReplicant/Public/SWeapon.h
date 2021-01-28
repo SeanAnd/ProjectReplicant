@@ -147,7 +147,10 @@ protected:
 	void OnRep_HitScanTrace();
 
 	UFUNCTION()
-	void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	void OnWeaponOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnWeaponHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
 	UFUNCTION()
 	void ResetComboCounter();
@@ -173,4 +176,7 @@ public:
 	FName ReturnWeaponSocketName(ASWeapon* weapon);
 
 	WeaponType ReturnWeaponType(ASWeapon* weapon);
+
+	UParticleSystem* GetDefaultImpactEffect();
+	UParticleSystem* GetFleshImpactEffect();
 };
