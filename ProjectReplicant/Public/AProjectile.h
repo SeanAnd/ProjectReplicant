@@ -31,9 +31,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	UProjectileMovementComponent* ProjectileMovement;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Projectile")
-	float BaseDamage;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
 	TSubclassOf<UDamageType> DamageType;
 
@@ -43,15 +40,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
 	float AOERadius;
 
+	uint8 TeamNum;
+
 	void PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint, UParticleSystem* DefaultImpactEffect, UParticleSystem* FleshImpactEffect);
 public:
 	UPROPERTY()
 		TEnumAsByte<EPhysicalSurface> SurfaceType;
 
 	AProjectile();
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
-		uint8 TeamNum;
 
 	/** called when projectile hits something */
 	UFUNCTION()
@@ -62,5 +58,7 @@ public:
 
 	/** Returns ProjectileMovement subobject **/
 	UProjectileMovementComponent* GetProjectileMovement() const { return ProjectileMovement; }
+	
+	uint8 GetTeamNum();
 };
 

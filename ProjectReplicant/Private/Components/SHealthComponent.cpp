@@ -110,7 +110,7 @@ bool USHealthComponent::IsFriendly(AActor* ActorA, AActor* ActorB)
 		if (ActorA->IsA<AProjectile>())
 		{
 			AProjectile* aaProjectile = Cast<AProjectile>(ActorA);
-			actorATeam = aaProjectile->TeamNum;
+			actorATeam = aaProjectile->GetTeamNum();
 		}
 		else
 		{
@@ -120,7 +120,7 @@ bool USHealthComponent::IsFriendly(AActor* ActorA, AActor* ActorB)
 		if (ActorB->IsA<AProjectile>())
 		{
 			AProjectile* abProjectile = Cast<AProjectile>(ActorB);
-			actorBTeam = abProjectile->TeamNum;
+			actorBTeam = abProjectile->GetTeamNum();
 		}
 		else
 		{

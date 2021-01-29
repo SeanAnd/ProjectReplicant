@@ -14,10 +14,9 @@ AProjectile::AProjectile()
 	// Use a sphere as a simple collision representation
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	CollisionComp->InitSphereRadius(5.0f);
-	CollisionComp->SetCollisionProfileName("Weapon");
-	CollisionComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
+	CollisionComp->SetCollisionProfileName("WeaponObject");
 	CollisionComp->OnComponentHit.AddDynamic(this, &AProjectile::OnHit);	// set up a notification for when this component hits something blocking
-	this->CollisionComp = this->CollisionComp;
+	CollisionComp->bReturnMaterialOnMove;
 
 	// Players can't walk on it
 	CollisionComp->SetWalkableSlopeOverride(FWalkableSlopeOverride(WalkableSlope_Unwalkable, 0.f));
@@ -46,40 +45,38 @@ void AProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimi
 	AActor* MyOwner = this;
 	AActor* ProjectileOwner = this->GetOwner();
 	ASCharacter* SCharacter = Cast<ASCharacter>(ProjectileOwner);
-	if (SCharacter)
-	{
-		this->TeamNum = SCharacter->TeamNum;
-	}
+	ASWeapon* currentWeapon = SCharacter->GetCurrentWeapon();
+	float baseDamage = currentWeapon->GetBaseDamage();
+	TeamNum = SCharacter->TeamNum;
+	UParticleSystem* FleshImpactEffect = currentWeapon->GetFleshImpactEffect();;
+	UParticleSystem* DefaultImpactEffect = currentWeapon->GetDefaultImpactEffect();
+	USoundBase* ImpactSound = currentWeapon->GetImpactSound();
+	EPhysicalSurface SurfaceType = SurfaceType_Default;
+	SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
 
+	if (ImpactSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ImpactSound, Hit.ImpactNormal);
+	}
+	//play the impact effect
+	PlayImpactEffects(SurfaceType, Hit.ImpactPoint, DefaultImpactEffect, FleshImpactEffect);
+
+	//If projectile type apply damage
 	if (this->ProjectileType == ProjectileType::Projectile)
 	{
 		if ((OtherActor != NULL) && (OtherActor != this) && (OtherComp != NULL))
 		{
-			AActor* HitActor = OtherActor;
-
-			UGameplayStatics::ApplyDamage(HitActor, BaseDamage, MyOwner->GetInstigatorController(), MyOwner, DamageType);
+			UGameplayStatics::ApplyDamage(OtherActor, baseDamage, MyOwner->GetInstigatorController(), MyOwner, DamageType);
 		}
 	}
 
-	//UGameplayStatics::ApplyRadialDamage(const UObject* WorldContextObject, float BaseDamage, const FVector& Origin, float DamageRadius, TSubclassOf<UDamageType> DamageTypeClass, const TArray<AActor*>& IgnoreActors, AActor* DamageCauser, AController* InstigatedByController, bool bDoFullDamage, ECollisionChannel DamagePreventionChannel )
-	//Conditionally deal AE damage based on projectile type. 
+	//If AOE type Conditionally deal AE damage
 	if (ProjectileType == ProjectileType::AOE)
 	{
 		UWorld* world = GetWorld();
 		const  TArray<AActor*> IgnoreActors;
 		AController* EventInstigator = GetInstigatorController();
-		UGameplayStatics::ApplyRadialDamage(world, BaseDamage, GetActorLocation(), AOERadius, DamageType, IgnoreActors, MyOwner, EventInstigator, true);
-	}
-
-	EPhysicalSurface SurfaceType = SurfaceType_Default;
-	SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
-	ASWeapon* currentWeapon = SCharacter->GetCurrentWeapon();
-	UParticleSystem* FleshImpactEffect = currentWeapon->GetFleshImpactEffect();;
-	UParticleSystem* DefaultImpactEffect = currentWeapon->GetDefaultImpactEffect();
-
-	if (currentWeapon)
-	{
-		PlayImpactEffects(SurfaceType, Hit.ImpactPoint, DefaultImpactEffect, FleshImpactEffect);
+		UGameplayStatics::ApplyRadialDamage(world, baseDamage, GetActorLocation(), AOERadius, DamageType, IgnoreActors, MyOwner, EventInstigator, true);
 	}
 
 	this->Destroy();
@@ -103,4 +100,9 @@ void AProjectile::PlayImpactEffects(EPhysicalSurface SurfaceType, FVector Impact
 	{
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SelectedEffect, ImpactPoint);
 	}
+}
+
+uint8 AProjectile::GetTeamNum()
+{
+	return TeamNum;
 }

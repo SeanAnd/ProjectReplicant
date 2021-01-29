@@ -19,6 +19,7 @@
 ASWeapon::ASWeapon()
 {
 	MeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComp"));
+	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	MeshComp->SetCollisionProfileName("Weapon");
 	RootComponent = MeshComp;
 
@@ -30,8 +31,6 @@ ASWeapon::ASWeapon()
 	//uncomment below to see hitbox
 	//CollisionComp->bHiddenInGame = false;
 	CollisionComp->InitBoxExtent(FVector(15, 20, 50));
-	CollisionComp->SetCollisionProfileName("Weapon");
-	//CollisionComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
 	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &ASWeapon::OnWeaponOverlap);
 	CollisionComp->SetGenerateOverlapEvents(true);
 	//CollisionComp->OnComponentHit.AddDynamic(this, &ASWeapon::OnWeaponHit);	
@@ -39,6 +38,7 @@ ASWeapon::ASWeapon()
 	CollisionComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	CollisionComp->SetWalkableSlopeOverride(FWalkableSlopeOverride(WalkableSlope_Unwalkable, 0.f));
 	CollisionComp->CanCharacterStepUpOn = ECB_No;
+	CollisionComp->bReturnMaterialOnMove;
 
 	BaseDamage = 20.0f;
 	BulletSpread = 2.0f;
@@ -166,9 +166,30 @@ void ASWeapon::OnProjectileFire()
 		FActorSpawnParameters ActorSpawnParams;
 		ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
 		ActorSpawnParams.Owner = MyOwner;
+		if (FireSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(GetWorld(), FireSound, MuzzleLocation);
+		}
 
+		if (MuzzleEffect)
+		{
+			UGameplayStatics::SpawnEmitterAttached(MuzzleEffect, MeshComp, MuzzleSocketName);
+		}
 		// spawn the projectile at the muzzle toward the center of the screen
 		GetWorld()->SpawnActor<AProjectile>(ASWeapon::ProjectileClass, MuzzleLocation, EyeRotation, ActorSpawnParams);
+
+		if (GetLocalRole() == ROLE_Authority)
+		{
+			if (FireSound)
+			{
+				UGameplayStatics::PlaySoundAtLocation(GetWorld(), FireSound, MuzzleLocation);
+			}
+
+			if (MuzzleEffect)
+			{
+				UGameplayStatics::SpawnEmitterAttached(MuzzleEffect, MeshComp, MuzzleSocketName);
+			}
+		}
 	}
 }
 
@@ -385,6 +406,16 @@ UParticleSystem* ASWeapon::GetFleshImpactEffect()
 	return this->FleshImpactEffect;
 }
 
+USoundBase* ASWeapon::GetFireSound()
+{
+	return this->FireSound;
+}
+
+USoundBase* ASWeapon::GetImpactSound()
+{
+	return this->ImpactSound;
+}
+
 void ASWeapon::ToggleCollisionCompOn()
 {
 	if (this->CollisionComp)
@@ -435,6 +466,10 @@ void ASWeapon::OnWeaponOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor,
 			UGameplayStatics::ApplyDamage(HitActor, BaseDamage, MeleeOwner->GetInstigatorController(), MeleeOwner, DamageType);
 			//TODO: Figure out how to get the impact point so that the effect plays
 			PlayImpactEffects(SurfaceType, SweepResult.ImpactPoint);
+			if (ImpactSound)
+			{
+				UGameplayStatics::PlaySoundAtLocation(GetWorld(), ImpactSound, SweepResult.ImpactNormal);
+			}
 			RecentlyHit.Add(hitChar);
 		}
 	}

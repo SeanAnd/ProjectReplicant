@@ -86,6 +86,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	UParticleSystem* TracerEffect;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	USoundBase* FireSound;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	USoundBase* ImpactSound;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<UCameraShake> FireCamShake;
 
@@ -179,4 +185,6 @@ public:
 
 	UParticleSystem* GetDefaultImpactEffect();
 	UParticleSystem* GetFleshImpactEffect();
+	USoundBase* GetFireSound();
+	USoundBase* GetImpactSound();
 };
