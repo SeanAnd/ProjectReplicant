@@ -2,6 +2,8 @@
 Content in this project may only be used in Unreal Engine projects as per the Unreal Engine EULA
 Originally based on a Udemy course by Tom Looman located here: https://www.udemy.com/course/unrealengine-cpp/
 
+Come say hi! https://www.twitch.tv/projectreplicant
+
 Purpose: To provide a quick template when creating a new multiplayer game.
 
 Current features: A functioning and replicating(mostly) health system, projectile/hitscan/melee(with combo) weapons and animations, horde mode multiplayer game mode.
