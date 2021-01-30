@@ -55,6 +55,12 @@ protected:
 	/* Default FOV set during begin play */
 	float DefaultFOV;
 
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerBeginZoom();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerEndZoom();
+
 	void BeginZoom();
 
 	void EndZoom();

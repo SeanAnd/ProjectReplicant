@@ -84,15 +84,49 @@ void ASCharacter::EndCrouch()
 	UnCrouch();
 }
 
+void ASCharacter::ServerBeginZoom_Implementation()
+{
+	BeginZoom();
+}
+
+bool ASCharacter::ServerBeginZoom_Validate()
+{
+	return true;
+}
+
+void ASCharacter::ServerEndZoom_Implementation()
+{
+	EndZoom();
+}
+
+bool ASCharacter::ServerEndZoom_Validate()
+{
+	return true;
+}
+
 void ASCharacter::BeginZoom()
 {
-	bWantsToZoom = true;
+	if (GetLocalRole() < ROLE_Authority)
+	{
+		ServerBeginZoom();
+	}
+	else
+	{
+		bWantsToZoom = true;
+	}
 }
 
 
 void ASCharacter::EndZoom()
 {
-	bWantsToZoom = false;
+	if (GetLocalRole() < ROLE_Authority)
+	{
+		ServerEndZoom();
+	}
+	else
+	{
+		bWantsToZoom = false;
+	}
 }
 
 

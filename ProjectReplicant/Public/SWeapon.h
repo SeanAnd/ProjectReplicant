@@ -107,14 +107,33 @@ protected:
 	void OnMeleeFire();
 
 	void PlayAnimation();
+	void PlaySoundEffect();
+	void SpawnProjectile();
 
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
 	void MultiCastAnimation();
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+	void MultiCastPlayParticleEffect();
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+	void MultiCastPlaySoundEffect();
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+	void MultiCastSpawnProjectile();
+
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerFire();
 
-	UFUNCTION(NetMulticast, Reliable, WithValidation)
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerAnimation();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerPlayParticleEffect();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerPlaySoundEffect();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerSpawnProjectile();
 
 	FTimerHandle TimerHandle_TimeBetweenShots;
 	FTimerHandle MeleeTimerHandle;

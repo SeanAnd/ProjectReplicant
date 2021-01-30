@@ -138,6 +138,7 @@ void ASWeapon::OnHitScanFire()
 		{
 			HitScanTrace.TraceTo = TracerEndPoint;
 			HitScanTrace.SurfaceType = SurfaceType;
+			ServerPlaySoundEffect();
 		}
 
 		LastFireTime = GetWorld()->TimeSeconds;
@@ -149,47 +150,14 @@ void ASWeapon::OnProjectileFire()
 	if (GetLocalRole() < ROLE_Authority)
 	{
 		ServerFire();
+		ServerPlayParticleEffect();
+		ServerPlaySoundEffect();
 	}
-
-	APawn* MyOwner = Cast<APawn>(GetOwner());
-	if (MyOwner)
+	else
 	{
-		FVector MuzzleLocation = MeshComp->GetSocketLocation("MuzzleSocket");
-		FRotator MuzzleRotation = MeshComp->GetSocketRotation("MuzzleSocket");
-
-		FVector EyeLocation;
-		FRotator EyeRotation;
-
-		MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotation);
-
-		//Set Spawn Collision Handling Override
-		FActorSpawnParameters ActorSpawnParams;
-		ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-		ActorSpawnParams.Owner = MyOwner;
-		if (FireSound)
-		{
-			UGameplayStatics::PlaySoundAtLocation(GetWorld(), FireSound, MuzzleLocation);
-		}
-
-		if (MuzzleEffect)
-		{
-			UGameplayStatics::SpawnEmitterAttached(MuzzleEffect, MeshComp, MuzzleSocketName);
-		}
-		// spawn the projectile at the muzzle toward the center of the screen
-		GetWorld()->SpawnActor<AProjectile>(ASWeapon::ProjectileClass, MuzzleLocation, EyeRotation, ActorSpawnParams);
-
-		if (GetLocalRole() == ROLE_Authority)
-		{
-			if (FireSound)
-			{
-				UGameplayStatics::PlaySoundAtLocation(GetWorld(), FireSound, MuzzleLocation);
-			}
-
-			if (MuzzleEffect)
-			{
-				UGameplayStatics::SpawnEmitterAttached(MuzzleEffect, MeshComp, MuzzleSocketName);
-			}
-		}
+		MultiCastPlayParticleEffect();
+		MultiCastPlaySoundEffect();
+		MultiCastSpawnProjectile();
 	}
 }
 
@@ -199,7 +167,7 @@ void ASWeapon::OnMeleeFire()
 	{
 		ServerFire();
 	}
-	ServerAnimation();
+	MultiCastAnimation();
 
 	APawn* MyOwner = Cast<APawn>(GetOwner());
 	if (MyOwner)
@@ -208,9 +176,45 @@ void ASWeapon::OnMeleeFire()
 	}
 }
 
-void ASWeapon::MultiCastAnimation() 
+void ASWeapon::MultiCastAnimation_Implementation()
 {
 	PlayAnimation();
+}
+
+bool ASWeapon::MultiCastAnimation_Validate()
+{
+	return true;
+}
+
+void ASWeapon::MultiCastPlayParticleEffect_Implementation()
+{
+	FVector v;
+	PlayFireEffects(v);
+}
+
+bool ASWeapon::MultiCastPlayParticleEffect_Validate()
+{
+	return true;
+}
+
+void ASWeapon::MultiCastPlaySoundEffect_Implementation()
+{
+	PlaySoundEffect();
+}
+
+bool ASWeapon::MultiCastPlaySoundEffect_Validate()
+{
+	return true;
+}
+
+void ASWeapon::MultiCastSpawnProjectile_Implementation()
+{
+	SpawnProjectile();
+}
+
+bool ASWeapon::MultiCastSpawnProjectile_Validate()
+{
+	return true;
 }
 
 void ASWeapon::PlayAnimation()
@@ -302,6 +306,40 @@ bool ASWeapon::ServerAnimation_Validate()
 }
 
 
+void ASWeapon::ServerPlayParticleEffect_Implementation()
+{
+	FVector v;
+	PlayFireEffects(v);
+}
+
+
+bool ASWeapon::ServerPlayParticleEffect_Validate()
+{
+	return true;
+}
+
+void ASWeapon::ServerPlaySoundEffect_Implementation()
+{
+	PlaySoundEffect();
+}
+
+
+bool ASWeapon::ServerPlaySoundEffect_Validate()
+{
+	return true;
+}
+
+void ASWeapon::ServerSpawnProjectile_Implementation()
+{
+	SpawnProjectile();
+}
+
+
+bool ASWeapon::ServerSpawnProjectile_Validate()
+{
+	return true;
+}
+
 
 void ASWeapon::StartFire()
 {
@@ -324,7 +362,7 @@ void ASWeapon::PlayFireEffects(FVector TraceEnd)
 		UGameplayStatics::SpawnEmitterAttached(MuzzleEffect, MeshComp, MuzzleSocketName);
 	}
 
-	if (TracerEffect)
+	if (TracerEffect && TypeOfWeapon == WeaponType::Hitscan)
 	{
 		FVector MuzzleLocation = MeshComp->GetSocketLocation(MuzzleSocketName);
 
@@ -343,6 +381,37 @@ void ASWeapon::PlayFireEffects(FVector TraceEnd)
 		{
 			PC->ClientPlayCameraShake(FireCamShake);
 		}
+	}
+}
+
+void ASWeapon::PlaySoundEffect()
+{
+	FVector MuzzleLocation = MeshComp->GetSocketLocation(MuzzleSocketName);
+	if (FireSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), FireSound, MuzzleLocation);
+	}
+}
+
+void ASWeapon::SpawnProjectile()
+{
+	APawn* MyOwner = Cast<APawn>(GetOwner());
+	if (MyOwner)
+	{
+		FVector EyeLocation;
+		FRotator EyeRotation;
+
+		//TODO: Figure out why client is not receiving EyeRotations Pitch
+		MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotation);
+
+		//Set Spawn Collision Handling Override
+		FActorSpawnParameters ActorSpawnParams;
+		ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+		ActorSpawnParams.Owner = MyOwner;
+		FVector MuzzleLocation = MeshComp->GetSocketLocation("MuzzleSocket");
+
+		// spawn the projectile at the muzzle toward the center of the screen
+		GetWorld()->SpawnActor<AProjectile>(ASWeapon::ProjectileClass, MuzzleLocation, EyeRotation, ActorSpawnParams);
 	}
 }
 
@@ -465,7 +534,12 @@ void ASWeapon::OnWeaponOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor,
 			SurfaceType = UPhysicalMaterial::DetermineSurfaceType(SweepResult.PhysMaterial.Get());
 			UGameplayStatics::ApplyDamage(HitActor, BaseDamage, MeleeOwner->GetInstigatorController(), MeleeOwner, DamageType);
 			//TODO: Figure out how to get the impact point so that the effect plays
-			PlayImpactEffects(SurfaceType, SweepResult.ImpactPoint);
+			//PlayImpactEffects(SurfaceType, SweepResult.ImpactPoint);
+			UParticleSystem* SelectedEffect = DefaultImpactEffect;
+			if (SelectedEffect)
+			{
+				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SelectedEffect, OtherActor->GetActorLocation());
+			}
 			if (ImpactSound)
 			{
 				UGameplayStatics::PlaySoundAtLocation(GetWorld(), ImpactSound, SweepResult.ImpactNormal);
